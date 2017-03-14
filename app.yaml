@@ -5,3 +5,11 @@ threadsafe: true
 handlers:
 - url: /.*
   script: main.app
+
+libraries:
+- name: ssl
+  version: latest
+
+env_variables:
+  TWITTER_CONSUMER_KEY: 'CONSUMER KEY OF YOUR TWITTER APPLICATION'
+  TWITTER_CONSUMER_SECRET: 'CONSUMER SECRET OF YOUR TWITTER APPLICATION'
