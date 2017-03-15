@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Result</title>
+  </head>
+  <body>
+    <h1>診断結果</h1>
+    <p>
+      @{{ screen_name }} さんの呟きポジティブ度は・・・
+      <b>{{ total_score }}</b>！！
+      {{ comment }}
+    </p>
+    <p>
+      {{ samples|join('、') }} などについて呟いているようです。
+    </p>
+  </body>
+</html>

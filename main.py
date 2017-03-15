@@ -32,20 +32,29 @@ def analyze(target):
     language_client = language.Client()
     document = language_client.document_from_text(text)
     annotated = document.annotate_text(include_syntax=False)
-
-    entity_names = set([entity.name.encode('utf-8') for entity in annotated.entities if entity.entity_type != 'OTHER'])
-    total_score = sum([sentence.sentiment.magnitude * sentence.sentiment.score for sentence in annotated.sentences])
-    return '@{} さんは {} などを呟いています。全体的なポジティブ度合いは… {}！'.format(
-        target,
-        ''.join(['「{}」'.format(x) for x in random.sample(entity_names, 7)]),
-        total_score)
+    return {
+      'total_score': sum([sentence.sentiment.magnitude * sentence.sentiment.score for sentence in annotated.sentences]),
+      'entities': set([entity.name for entity in annotated.entities if entity.entity_type != 'OTHER'])
+    }
 
 
 @app.route('/diagnose', methods=['POST'])
 def diagnose():
     screen_name = request.form['screen_name']
     result = analyze(screen_name)
-    return result
+    comment = 'ポジティブ！' if result['total_score'] > 0.0 else 'ネガティブ！'
+    if abs(result['total_score']) > 10.0:
+        comment = 'めっちゃ' + comment
+    elif abs(result['total_score']) > 5.0:
+        comment = 'かなり' + comment
+    else:
+        comment = 'どちらかというと' + comment
+    samples = random.sample(result['entities'], 7)
+    return render_template('result.html',
+                           screen_name=screen_name,
+                           total_score=result['total_score'],
+                           comment=comment.decode('utf-8'),
+                           samples=samples)
 
 
 @app.route('/')
