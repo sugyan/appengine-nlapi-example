@@ -7,6 +7,7 @@ import requests_toolbelt.adapters.appengine
 
 from flask import Flask, render_template, request
 from google.cloud import language
+from google.cloud.language.entity import EntityType
 
 requests_toolbelt.adapters.appengine.monkeypatch()
 app = Flask(__name__)
@@ -24,35 +25,43 @@ def collect_tweets(target):
         return ''
 
 
-def analyze(target):
-    text = collect_tweets(target)
-    if text == '':
-        return '取得できませんでした'
-
+def process(text):
     language_client = language.Client()
     document = language_client.document_from_text(text)
     annotated = document.annotate_text(include_syntax=False)
-    return {
-      'total_score': sum([sentence.sentiment.magnitude * sentence.sentiment.score for sentence in annotated.sentences]),
-      'entities': set([entity.name for entity in annotated.entities if entity.entity_type != 'OTHER'])
-    }
+
+    # calculate total score
+    total_score = 0.0
+    for sentence in annotated.sentences:
+        total_score += sentence.sentiment.magnitude * sentence.sentiment.score
+    # extract entities
+    entities = set()
+    for entity in annotated.entities:
+        if entity.entity_type not in [EntityType.OTHER]:
+            entities.add(entity.name)
+
+    return total_score, entities
 
 
-@app.route('/diagnose', methods=['POST'])
-def diagnose():
+@app.route('/analyze', methods=['POST'])
+def analyze():
     screen_name = request.form['screen_name']
-    result = analyze(screen_name)
-    comment = 'ポジティブ！' if result['total_score'] > 0.0 else 'ネガティブ！'
-    if abs(result['total_score']) > 10.0:
-        comment = 'めっちゃ' + comment
-    elif abs(result['total_score']) > 5.0:
+    text = collect_tweets(screen_name)
+    if text == '':
+        return render_template('error.html')
+
+    total_score, entities = process(text)
+    comment = 'ポジティブ！' if total_score > 0.0 else 'ネガティブ！'
+    if abs(total_score) > 10.0:
+        comment = 'とっても' + comment
+    elif abs(total_score) > 5.0:
         comment = 'かなり' + comment
     else:
         comment = 'どちらかというと' + comment
-    samples = random.sample(result['entities'], 7)
+    samples = random.sample(entities, min(7, len(entities)))
     return render_template('result.html',
                            screen_name=screen_name,
-                           total_score=result['total_score'],
+                           total_score=total_score,
                            comment=comment.decode('utf-8'),
                            samples=samples)
 
