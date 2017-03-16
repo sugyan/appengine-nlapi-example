@@ -37,7 +37,7 @@ def process(text):
     # extract entities
     entities = set()
     for entity in annotated.entities:
-        if entity.entity_type not in [EntityType.OTHER]:
+        if entity.entity_type not in [EntityType.OTHER, EntityType.UNKNOWN]:
             entities.add(entity.name)
 
     return total_score, entities
